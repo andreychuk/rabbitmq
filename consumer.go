@@ -16,7 +16,7 @@ type (
 		brokerChannel     *BrokerChannel
 		startConsumerCn   chan bool
 		singleGoroutine   bool
-		exchanges		  []exchange
+		exchanges         []exchange
 	}
 	Message struct {
 		Payload       []byte
@@ -26,13 +26,13 @@ type (
 	}
 
 	exchange struct {
-		exchangeName      string
-		routingKey        string
-		exchangeType      ExchangeType
+		exchangeName string
+		routingKey   string
+		exchangeType ExchangeType
+		args         amqp.Table
 	}
 
 	handleConsumer func(message Message) error
-
 )
 
 func (m *MessageBrokerServer) AddConsumer(queueName string) *Consumer {
@@ -42,7 +42,7 @@ func (m *MessageBrokerServer) AddConsumer(queueName string) *Consumer {
 		errorQueueName:    queueName + ERRORPREFIX,
 		errorExchangeName: queueName + ERRORPREFIX,
 		startConsumerCn:   make(chan bool),
-		singleGoroutine : false,
+		singleGoroutine:   false,
 	}
 
 	var isAlreadyDeclareQueue bool
@@ -58,21 +58,21 @@ func (m *MessageBrokerServer) AddConsumer(queueName string) *Consumer {
 	return consumer
 }
 
-func (c *Consumer) HandleConsumer (consumer handleConsumer)  *Consumer {
+func (c *Consumer) HandleConsumer(consumer handleConsumer) *Consumer {
 	c.handleConsumer = consumer
 	return c
 }
 
-func (c *Consumer) WithSingleGoroutine (value bool)  *Consumer {
+func (c *Consumer) WithSingleGoroutine(value bool) *Consumer {
 	c.singleGoroutine = value
 	return c
 }
 
-func (c *Consumer) SubscriberExchange (routingKey string,exchangeType ExchangeType, exchangeName string)  *Consumer {
+func (c *Consumer) SubscriberExchange(routingKey string, exchangeType ExchangeType, exchangeName string) *Consumer {
 
 	var isAlreadyDeclareExchange bool
 
-	for _, item := range c.exchanges{
+	for _, item := range c.exchanges {
 		if item.exchangeName == exchangeName {
 			isAlreadyDeclareExchange = true
 		}
@@ -82,10 +82,32 @@ func (c *Consumer) SubscriberExchange (routingKey string,exchangeType ExchangeTy
 		return c
 	}
 
-	c.exchanges = append(c.exchanges,exchange{exchangeName:exchangeName,exchangeType:exchangeType,routingKey:routingKey})
+	c.exchanges = append(c.exchanges, exchange{exchangeName: exchangeName, exchangeType: exchangeType, routingKey: routingKey})
 	return c
 }
 
+func (c *Consumer) SubscriberExchangeWithArguments(routingKey string, exchangeType ExchangeType, exchangeName string, args amqp.Table) *Consumer {
+
+	var isAlreadyDeclareExchange bool
+
+	for _, item := range c.exchanges {
+		if item.exchangeName == exchangeName {
+			isAlreadyDeclareExchange = true
+		}
+	}
+
+	if isAlreadyDeclareExchange {
+		return c
+	}
+
+	c.exchanges = append(c.exchanges, exchange{
+		exchangeName: exchangeName,
+		exchangeType: exchangeType,
+		routingKey:   routingKey,
+		args:         args,
+	})
+	return c
+}
 
 func (m *MessageBrokerServer) RunConsumers() error {
 
@@ -129,7 +151,7 @@ func (m *MessageBrokerServer) RunConsumers() error {
 						for _, item := range consumer.exchanges {
 
 							consumer.
-								createExchange(item.exchangeName, item.exchangeType).
+								createExchange(item.exchangeName, item.exchangeType, item.args).
 								exchangeBind(item.exchangeName, consumer.queueName, item.routingKey, item.exchangeType)
 
 						}
@@ -199,8 +221,6 @@ func (m *MessageBrokerServer) run(delivery <-chan amqp.Delivery, consumer *Consu
 		})
 	}
 }
-
-
 
 func (c Consumer) listenToQueue(queueName string) (<-chan amqp.Delivery, error) {
 
