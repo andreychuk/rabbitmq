@@ -2,6 +2,7 @@ package rabbitmq
 
 import (
 	"fmt"
+	"github.com/streadway/amqp"
 	"golang.org/x/net/context"
 	"golang.org/x/sync/errgroup"
 	"net"
@@ -18,10 +19,11 @@ var (
 )
 
 const (
-	Direct ExchangeType = 1
-	Fanout ExchangeType = 2
-	Topic  ExchangeType = 3
+	Direct            ExchangeType = 1
+	Fanout            ExchangeType = 2
+	Topic             ExchangeType = 3
 	ConsistentHashing ExchangeType = 4
+	XDelayedMessage   ExchangeType = 5
 )
 
 type (
@@ -59,7 +61,7 @@ func NewRabbitMqClient(nodes []string, userName string, password string, virtual
 			RetryInterval:   RETRY_INTERVAL,
 			Password:        password,
 			UserName:        userName,
-			VirtualHost: virtualHost,
+			VirtualHost:     virtualHost,
 		},
 		messageBroker: NewMessageBroker(),
 	}
@@ -125,14 +127,21 @@ func sendSystemNotification(state string) error {
 }
 
 func (c *Consumer) createExchange(exchange string, exchangeType ExchangeType) *Consumer {
-	 c.brokerChannel.channel.ExchangeDeclare(exchange, convertExchangeType(exchangeType), true, false, false, false, nil)
+	extType := convertExchangeType(exchangeType)
+	if extType == "x-delayed-message" {
+		args := make(amqp.Table)
+		args["x-delayed-type"] = "direct"
 
-	 return c
+		c.brokerChannel.channel.ExchangeDeclare(exchange, extType, true, false, false, false, args)
+	} else {
+		c.brokerChannel.channel.ExchangeDeclare(exchange, extType, true, false, false, false, nil)
+	}
 
+	return c
 }
 
-func (c *Consumer) createQueue()  *Consumer {
-	 c.brokerChannel.channel.QueueDeclare(c.queueName, true, false, false, false, nil)
+func (c *Consumer) createQueue() *Consumer {
+	c.brokerChannel.channel.QueueDeclare(c.queueName, true, false, false, false, nil)
 	return c
 
 }
@@ -143,10 +152,10 @@ func (c *Consumer) exchangeBind(destinationExchange string, queueName string, ro
 	return c
 }
 
-func (c *Consumer) createErrorQueueAndBind()  *Consumer {
+func (c *Consumer) createErrorQueueAndBind() *Consumer {
 	c.brokerChannel.channel.ExchangeDeclare(c.errorExchangeName, "fanout", true, false, false, false, nil)
 	q, _ := c.brokerChannel.channel.QueueDeclare(c.errorQueueName, true, false, false, false, nil)
-	c.brokerChannel.channel.QueueBind(q.Name, "",c.errorExchangeName, false, nil)
+	c.brokerChannel.channel.QueueBind(q.Name, "", c.errorExchangeName, false, nil)
 	return c
 
 }
