@@ -10,6 +10,7 @@ RabbitMq Wrapper is the a client API for RabbitMQ.
 * Create goroutines and consume messages asynchronously 
 * Retry to connect another node  When RabbitMq Node is Down or Broken Connection (mini load balancing :)
 * Some extra features while publishing message  (will be added) 
+* Add support for [rabbitmq-delayed-message-exchange](https://github.com/rabbitmq/rabbitmq-delayed-message-exchange) plugin
 
 To connect to a RabbitMQ broker...
 
