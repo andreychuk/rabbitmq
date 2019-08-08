@@ -1,11 +1,11 @@
 package rabbitmq
 
 import (
-	"github.com/google/uuid"
-	"reflect"
-	"fmt"
 	"encoding/json"
+	"fmt"
+	"github.com/google/uuid"
 	"github.com/streadway/amqp"
+	"reflect"
 )
 
 func getGuid() string {
@@ -28,11 +28,10 @@ func getExchangeName(message interface{}) string {
 	}
 }
 
-func  logConsole(message string){
-	logMessage,_ :=json.Marshal(Log{Message:message})
+func logConsole(message string) {
+	logMessage, _ := json.Marshal(Log{Message: message})
 	fmt.Println(string(logMessage))
 }
-
 
 func convertExchangeType(exchangeType ExchangeType) string {
 
@@ -50,9 +49,13 @@ func convertExchangeType(exchangeType ExchangeType) string {
 	case ConsistentHashing:
 		rabbitmqExchangeType = "x-consistent-hash"
 		break
+	case XDelayedMessage:
+		rabbitmqExchangeType = "x-delayed-message"
+		break
 	}
 	return rabbitmqExchangeType
 }
+
 type Log struct {
-	Message   string
+	Message string
 }
