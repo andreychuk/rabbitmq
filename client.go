@@ -126,17 +126,9 @@ func sendSystemNotification(state string) error {
 
 }
 
-func (c *Consumer) createExchange(exchange string, exchangeType ExchangeType) *Consumer {
-	extType := convertExchangeType(exchangeType)
-	if extType == "x-delayed-message" {
-		args := make(amqp.Table)
-		args["x-delayed-type"] = "direct"
+func (c *Consumer) createExchange(exchange string, exchangeType ExchangeType, args amqp.Table) *Consumer {
 
-		c.brokerChannel.channel.ExchangeDeclare(exchange, extType, true, false, false, false, args)
-	} else {
-		c.brokerChannel.channel.ExchangeDeclare(exchange, extType, true, false, false, false, nil)
-	}
-
+	c.brokerChannel.channel.ExchangeDeclare(exchange, convertExchangeType(exchangeType), true, false, false, false, args)
 	return c
 }
 
