@@ -94,3 +94,17 @@ To connect to a RabbitMQ broker with retry policy
         		WithSingleGoroutine(true).
         		HandleConsumer(onConsumed2)
 
+
+Use `rabbitmq_delayed_message_exchange` plugin
+     
+        args := make(amqp.Table)
+        args["x-delayed-type"] = "direct"
+    
+        rabbitClient.AddConsumer("In.Person").
+                    SubscriberExchangeWithArguments(
+                        "Person.*",
+                        rabbitmq.XDelayedMessage,
+                        "delay-messages",
+                        args,
+                    ).
+                    HandleConsumer(onConsumed2)
